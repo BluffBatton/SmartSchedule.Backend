@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="SmartSchedule.API/SmartSchedule.API.csproj" />
+  <Project Path="SmartSchedule.Application/SmartSchedule.Application.csproj" />
+  <Project Path="SmartSchedule.Domain/SmartSchedule.Domain.csproj" />
+  <Project Path="SmartSchedule.Infrastructure/SmartSchedule.Infrastructure.csproj" />
+</Solution>
