@@ -23,6 +23,7 @@ namespace SmartSchedule.Domain.Entities
 
         public UserStatus Status { get; set; } = UserStatus.Active;
 
+
         public TeacherSetting? TeacherSetting { get; set; }
 
         public ICollection<TimeSlot> TeacherTimeSlots { get; set; } = new List<TimeSlot>();
