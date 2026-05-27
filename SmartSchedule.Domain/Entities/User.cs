@@ -23,6 +23,8 @@ namespace SmartSchedule.Domain.Entities
 
         public UserStatus Status { get; set; } = UserStatus.Active;
 
+        public DateTime? LastLoginAtUtc { get; set; }
+
 
         public TeacherSetting? TeacherSetting { get; set; }
 

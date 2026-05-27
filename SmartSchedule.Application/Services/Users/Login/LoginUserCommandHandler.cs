@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
+using SmartSchedule.Application.Common.Exceptions;
 using SmartSchedule.Application.Interfaces;
 using SmartSchedule.Domain.Enums;
 
@@ -26,19 +27,19 @@ namespace SmartSchedule.Application.Services.Users.Login
             var email = request.Email.Trim().ToLowerInvariant();
 
             if (string.IsNullOrWhiteSpace(email))
-                throw new InvalidOperationException("Email is required.");
+                throw new ValidationException("Email is required.");
 
             if (string.IsNullOrWhiteSpace(request.Password))
-                throw new InvalidOperationException("Password is required.");
+                throw new ValidationException("Password is required.");
 
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.Email.ToLower() == email, cancellationToken);
 
             if (user is null)
-                throw new InvalidOperationException("Invalid email or password.");
+                throw new UnauthorizedException("Invalid email or password.");
 
             if (user.Status == UserStatus.Blocked)
-                throw new InvalidOperationException("User is blocked.");
+                throw new ForbiddenException("User is blocked.");
 
             var isPasswordValid = _passwordHasherService.VerifyPassword(
                 user,
@@ -46,7 +47,10 @@ namespace SmartSchedule.Application.Services.Users.Login
                 user.PasswordHash);
 
             if (!isPasswordValid)
-                throw new InvalidOperationException("Invalid email or password.");
+                throw new UnauthorizedException("Invalid email or password.");
+
+            user.LastLoginAtUtc = DateTime.UtcNow;
+            await _context.SaveChangesAsync(cancellationToken);
 
             var accessToken = _jwtService.GenerateAccessToken(user);
 

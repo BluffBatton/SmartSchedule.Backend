@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
+using SmartSchedule.Application.Common.Exceptions;
 using SmartSchedule.Application.Interfaces;
 using SmartSchedule.Domain.Enums;
 
@@ -17,10 +18,10 @@ namespace SmartSchedule.Application.Services.Users.UpdateUserRole
                 .FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
 
             if (user is null)
-                throw new InvalidOperationException("User not found.");
+                throw new NotFoundException("User not found.");
 
             if (!Enum.TryParse<UserRole>(request.Role, true, out var role))
-                throw new InvalidOperationException("Invalid role.");
+                throw new ValidationException("Invalid role.");
 
             user.Role = role;
 

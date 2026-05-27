@@ -307,6 +307,9 @@ namespace SmartSchedule.Infrastructure.Persistance.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
+                    b.Property<DateTime?>("LastLoginAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -339,6 +342,8 @@ namespace SmartSchedule.Infrastructure.Persistance.Migrations
                     b.HasIndex("Email")
                         .IsUnique()
                         .HasFilter("\"DeletedAtUtc\" IS NULL");
+
+                    b.HasIndex("LastLoginAtUtc");
 
                     b.ToTable("Users", (string)null);
                 });

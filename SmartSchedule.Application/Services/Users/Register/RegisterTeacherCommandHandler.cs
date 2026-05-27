@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using SmartSchedule.Application.Common.Exceptions;
 using SmartSchedule.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using SmartSchedule.Domain.Entities;
@@ -20,35 +21,42 @@ namespace SmartSchedule.Application.Services.Users.Register
         public async Task<Guid> Handle(RegisterTeacherCommand request, CancellationToken cancellationToken)
         {
             var userId = _userContextService.GetCurrentUserId();
-            if(userId is null)
+            if (userId is null)
             {
-                throw new ArgumentNullException(nameof(userId));
+                throw new UnauthorizedException("User is not authenticated.");
             }
 
             var firstName = request.FirstName.Trim();
             var lastName = request.LastName.Trim();
-            var email = request.Email.Trim();
+            var email = request.Email.Trim().ToLowerInvariant();
             var departmentId = request.DepartmentId;
             var password = request.Password.Trim();
 
             if (string.IsNullOrWhiteSpace(firstName))
-                throw new InvalidOperationException("First name is required.");
+                throw new ValidationException("First name is required.");
 
             if (string.IsNullOrWhiteSpace(lastName))
-                throw new InvalidOperationException("Last name is required.");
+                throw new ValidationException("Last name is required.");
 
             if (string.IsNullOrWhiteSpace(email))
-                throw new InvalidOperationException("Email is required.");
+                throw new ValidationException("Email is required.");
 
             if (departmentId == Guid.Empty)
-                throw new InvalidOperationException("Department is required.");
+                throw new ValidationException("Department is required.");
 
             if (string.IsNullOrWhiteSpace(password))
-                throw new InvalidOperationException("Password is required.");
+                throw new ValidationException("Password is required.");
+
+            var departmentExists = await _context.Departments
+                .AnyAsync(d => d.Id == departmentId, cancellationToken);
+
+            if (!departmentExists)
+                throw new NotFoundException($"Department with id '{departmentId}' was not found.");
 
             var emailExists = await _context.Users.AnyAsync(u => u.Email == email, cancellationToken);
-            if(emailExists){
-                throw new InvalidOperationException("Email is already in use.");
+            if (emailExists)
+            {
+                throw new ConflictException("Email is already in use.");
             }
 
             var teacher = new User

@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
+using SmartSchedule.Application.Common.Exceptions;
 using SmartSchedule.Application.Interfaces;
 using SmartSchedule.Domain.Entities;
 using SmartSchedule.Domain.Enums;
@@ -26,22 +27,22 @@ namespace SmartSchedule.Application.Services.Users.Register
             var email = request.Email.Trim().ToLowerInvariant();
 
             if (string.IsNullOrWhiteSpace(firstName))
-                throw new InvalidOperationException("First name is required.");
+                throw new ValidationException("First name is required.");
 
             if (string.IsNullOrWhiteSpace(lastName))
-                throw new InvalidOperationException("Last name is required.");
+                throw new ValidationException("Last name is required.");
 
             if (string.IsNullOrWhiteSpace(email))
-                throw new InvalidOperationException("Email is required.");
+                throw new ValidationException("Email is required.");
 
             if (string.IsNullOrWhiteSpace(request.Password))
-                throw new InvalidOperationException("Password is required.");
+                throw new ValidationException("Password is required.");
 
             var emailAlreadyExists = await _context.Users
                 .AnyAsync(u => u.Email == email, cancellationToken);
 
             if (emailAlreadyExists)
-                throw new InvalidOperationException("User with this email already exists.");
+                throw new ConflictException("User with this email already exists.");
 
             var user = new User
             {

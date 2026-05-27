@@ -1,12 +1,19 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using SmartSchedule.Application.Common.Configuration;
+using SmartSchedule.Application.Common.Exceptions;
 using SmartSchedule.Application.Interfaces;
 using SmartSchedule.Domain.Entities;
 using SmartSchedule.Domain.Enums;
 
 namespace SmartSchedule.Application.Services.Bookings.Create
 {
-    internal sealed class CreateBookingCommandHandler(IApplicationDbContext context, IUserContextService userContextService) : IRequestHandler<CreateBookingCommand, Guid>
+    internal sealed class CreateBookingCommandHandler(
+        IApplicationDbContext context,
+        IUserContextService userContextService,
+        IOptionsSnapshot<BookingRulesOptions> bookingRulesSnapshot)
+        : IRequestHandler<CreateBookingCommand, Guid>
     {
         public async Task<Guid> Handle(CreateBookingCommand request, CancellationToken cancellationToken)
         {
@@ -14,7 +21,7 @@ namespace SmartSchedule.Application.Services.Bookings.Create
 
             if (studentId is null)
             {
-                throw new UnauthorizedAccessException("User is not authenticated.");
+                throw new UnauthorizedException("User is not authenticated.");
             }
 
             var student = await context.Users
@@ -22,17 +29,17 @@ namespace SmartSchedule.Application.Services.Bookings.Create
 
             if (student is null)
             {
-                throw new InvalidOperationException("Student not found.");
+                throw new NotFoundException("Student not found.");
             }
 
             if (student.Role != UserRole.Student)
             {
-                throw new InvalidOperationException("Only students can create bookings.");
+                throw new ForbiddenException("Only students can create bookings.");
             }
 
             if (student.Status == UserStatus.Blocked)
             {
-                throw new InvalidOperationException("User is blocked.");
+                throw new ForbiddenException("User is blocked.");
             }
 
             var now = DateTime.UtcNow;
@@ -43,22 +50,53 @@ namespace SmartSchedule.Application.Services.Bookings.Create
 
             if (timeSlot is null)
             {
-                throw new InvalidOperationException("Time slot not found.");
+                throw new NotFoundException("Time slot not found.");
             }
 
             if (timeSlot.Teacher.Status != UserStatus.Active)
             {
-                throw new InvalidOperationException("Teacher is not active.");
+                throw new ConflictException("Teacher is not active.");
             }
 
             if (timeSlot.StartAtUtc <= now)
             {
-                throw new InvalidOperationException("Cannot book a past time slot.");
+                throw new ConflictException("Cannot book a past time slot.");
             }
 
             if (timeSlot.Status != TimeSlotStatus.Available)
             {
-                throw new InvalidOperationException("Time slot is not available.");
+                throw new ConflictException("Time slot is not available.");
+            }
+
+            var rules = bookingRulesSnapshot.Value;
+            var maxActive = Math.Max(1, rules.MaxActiveBookingsPerStudent);
+
+            var activeFutureCount = await context.Bookings
+                .CountAsync(b =>
+                    b.StudentId == studentId.Value &&
+                    b.Status == BookingStatus.Active &&
+                    b.TimeSlot.StartAtUtc > now,
+                    cancellationToken);
+
+            if (activeFutureCount >= maxActive)
+            {
+                throw new ConflictException(
+                    $"You have reached the limit of {maxActive} active bookings. " +
+                    "Cancel an existing booking before creating a new one.");
+            }
+
+            var alreadyHasActiveWithTeacher = await context.Bookings
+                .AnyAsync(b =>
+                    b.StudentId == studentId.Value &&
+                    b.Status == BookingStatus.Active &&
+                    b.TimeSlot.TeacherId == timeSlot.TeacherId &&
+                    b.TimeSlot.StartAtUtc > now,
+                    cancellationToken);
+
+            if (alreadyHasActiveWithTeacher)
+            {
+                throw new ConflictException(
+                    "You already have an active booking with this teacher.");
             }
 
             var activeBookingExists = await context.Bookings
@@ -69,7 +107,7 @@ namespace SmartSchedule.Application.Services.Bookings.Create
 
             if (activeBookingExists)
             {
-                throw new InvalidOperationException("Time slot is already booked.");
+                throw new ConflictException("Time slot is already booked.");
             }
 
             var booking = new Booking
@@ -111,7 +149,15 @@ namespace SmartSchedule.Application.Services.Bookings.Create
             await context.Notifications.AddAsync(studentNotification, cancellationToken);
             await context.Notifications.AddAsync(teacherNotification, cancellationToken);
 
-            await context.SaveChangesAsync(cancellationToken);
+            try
+            {
+                await context.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException)
+            {
+                throw new ConflictException(
+                    "Time slot was just booked by another student. Please pick another slot.");
+            }
 
             return booking.Id;
         }

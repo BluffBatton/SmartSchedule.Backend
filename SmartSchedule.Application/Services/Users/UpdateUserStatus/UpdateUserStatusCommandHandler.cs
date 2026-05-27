@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
+using SmartSchedule.Application.Common.Exceptions;
 using SmartSchedule.Application.Interfaces;
 using SmartSchedule.Domain.Enums;
 
@@ -16,10 +17,10 @@ namespace SmartSchedule.Application.Services.Users.UpdateUserStatus
                 .FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
 
             if (user is null)
-                throw new InvalidOperationException("User not found.");
+                throw new NotFoundException("User not found.");
 
             if (!Enum.TryParse<UserStatus>(request.Status, true, out var status))
-                throw new InvalidOperationException("Invalid status.");
+                throw new ValidationException("Invalid status.");
 
             user.Status = status;
 

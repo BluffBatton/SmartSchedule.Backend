@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
+using SmartSchedule.Application.Common.Exceptions;
 using SmartSchedule.Application.Interfaces;
 
 namespace SmartSchedule.Application.Services.Bookings.GetStudentBookings
@@ -17,7 +18,7 @@ namespace SmartSchedule.Application.Services.Bookings.GetStudentBookings
 
             if (studentId is null)
             {
-                throw new UnauthorizedAccessException("User is not authenticated.");
+                throw new UnauthorizedException("User is not authenticated.");
             }
 
             return await context.Bookings

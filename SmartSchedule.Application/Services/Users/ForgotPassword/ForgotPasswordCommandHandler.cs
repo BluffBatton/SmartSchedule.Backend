@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
+using SmartSchedule.Application.Common.Exceptions;
 using SmartSchedule.Application.Interfaces;
 using SmartSchedule.Domain.Entities;
 using System.Security.Cryptography;
@@ -20,7 +21,7 @@ namespace SmartSchedule.Application.Services.Users.ForgotPassword
 
             if (string.IsNullOrWhiteSpace(email))
             {
-                throw new InvalidOperationException("Email is required");
+                throw new ValidationException("Email is required.");
             }
 
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email, cancellationToken);

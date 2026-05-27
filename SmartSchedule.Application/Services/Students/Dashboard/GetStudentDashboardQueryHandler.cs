@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
+using SmartSchedule.Application.Common.Exceptions;
 using SmartSchedule.Application.Interfaces;
 using SmartSchedule.Domain.Enums;
 
@@ -18,7 +19,7 @@ namespace SmartSchedule.Application.Services.Students.Dashboard
 
             if (userId is null)
             {
-                throw new UnauthorizedAccessException("User is not authenticated.");
+                throw new UnauthorizedException("User is not authenticated.");
             }
 
             var now = DateTime.UtcNow;

@@ -1,5 +1,8 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using SmartSchedule.Application.Common.Configuration;
+using SmartSchedule.Application.Common.Exceptions;
 using SmartSchedule.Application.Interfaces;
 using SmartSchedule.Domain.Entities;
 using SmartSchedule.Domain.Enums;
@@ -8,7 +11,8 @@ namespace SmartSchedule.Application.Services.Bookings.CancelBooking
 {
     internal sealed class CancelBookingCommandHandler(
         IApplicationDbContext context,
-        IUserContextService userContextService)
+        IUserContextService userContextService,
+        IOptionsSnapshot<BookingRulesOptions> bookingRulesSnapshot)
         : IRequestHandler<CancelBookingCommand>
     {
         public async Task Handle(
@@ -19,7 +23,7 @@ namespace SmartSchedule.Application.Services.Bookings.CancelBooking
 
             if (userId is null)
             {
-                throw new UnauthorizedAccessException("User is not authenticated.");
+                throw new UnauthorizedException("User is not authenticated.");
             }
 
             var userRole = userContextService.GetCurrentUserRole();
@@ -30,12 +34,12 @@ namespace SmartSchedule.Application.Services.Bookings.CancelBooking
 
             if (booking is null)
             {
-                throw new InvalidOperationException("Booking not found.");
+                throw new NotFoundException("Booking not found.");
             }
 
             if (booking.Status != BookingStatus.Active)
             {
-                throw new InvalidOperationException("Only active booking can be cancelled.");
+                throw new ConflictException("Only active booking can be cancelled.");
             }
 
             var isStudentOwner = userRole == UserRole.Student.ToString()
@@ -48,10 +52,22 @@ namespace SmartSchedule.Application.Services.Bookings.CancelBooking
 
             if (!isStudentOwner && !isTeacherOwner && !isAdmin)
             {
-                throw new UnauthorizedAccessException("You are not allowed to cancel this booking.");
+                throw new ForbiddenException("You are not allowed to cancel this booking.");
             }
 
             var now = DateTime.UtcNow;
+
+            if (isStudentOwner && !isAdmin && !isTeacherOwner)
+            {
+                var deadlineHours = Math.Max(0, bookingRulesSnapshot.Value.CancelDeadlineHours);
+                var deadline = booking.TimeSlot.StartAtUtc.AddHours(-deadlineHours);
+
+                if (now > deadline)
+                {
+                    throw new ConflictException(
+                        $"Cannot cancel a booking later than {deadlineHours} hour(s) before its start time.");
+                }
+            }
 
             booking.Status = BookingStatus.Cancelled;
             booking.CancelledAtUtc = now;

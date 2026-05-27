@@ -4,7 +4,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using SmartSchedule.Application.Interfaces;
+using SmartSchedule.Infrastructure.BackgroundServices;
 using SmartSchedule.Infrastructure.Integration;
+using SmartSchedule.Infrastructure.Persistance.Seeding;
 using System.Text;
 
 namespace SmartSchedule.Infrastructure.Persistance
@@ -23,6 +25,21 @@ namespace SmartSchedule.Infrastructure.Persistance
 
             services.AddScoped<IApplicationDbContext>(provider =>
                 provider.GetRequiredService<ApplicationDbContext>());
+
+            services.Configure<DatabaseInitializerOptions>(
+                configuration.GetSection(DatabaseInitializerOptions.SectionName));
+
+            services.AddSingleton<DatabaseInitializer>();
+
+            return services;
+        }
+
+        public static IServiceCollection AddBackgroundJobs(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.Configure<InactiveUsersCleanupOptions>(
+                configuration.GetSection(InactiveUsersCleanupOptions.SectionName));
+
+            services.AddHostedService<InactiveUsersCleanupService>();
 
             return services;
         }

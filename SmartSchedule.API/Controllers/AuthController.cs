@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartSchedule.Application.Services.Users.ForgotPassword;
 using SmartSchedule.Application.Services.Users.Login;
@@ -34,6 +35,7 @@ namespace SmartSchedule.API.Controllers
         }
 
         [HttpPost("register-teacher")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> RegisterTeacher(
             [FromBody] RegisterTeacherCommand command,
             CancellationToken cancellationToken)

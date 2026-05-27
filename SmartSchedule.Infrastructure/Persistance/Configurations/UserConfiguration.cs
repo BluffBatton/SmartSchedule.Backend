@@ -43,6 +43,10 @@ namespace SmartSchedule.Infrastructure.Persistance.Configurations
                 .IsRequired()
                 .HasMaxLength(50);
 
+            builder.Property(u => u.LastLoginAtUtc);
+
+            builder.HasIndex(u => u.LastLoginAtUtc);
+
             builder.HasOne(u => u.Department)
                 .WithMany(d => d.Users)
                 .HasForeignKey(u => u.DepartmentId)

@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
+using SmartSchedule.Application.Common.Exceptions;
 using SmartSchedule.Application.Interfaces;
 using System.Security.Cryptography;
 using System.Text;
@@ -22,13 +23,13 @@ namespace SmartSchedule.Application.Services.Users.ResetPassword
         public async Task<bool> Handle(ResetPasswordCommand request, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(request.Token))
-                throw new InvalidOperationException("Token is required.");
+                throw new ValidationException("Token is required.");
 
             if (string.IsNullOrWhiteSpace(request.NewPassword))
-                throw new InvalidOperationException("New password is required.");
+                throw new ValidationException("New password is required.");
 
             if (request.NewPassword.Length < 6)
-                throw new InvalidOperationException("Password must contain at least 6 characters.");
+                throw new ValidationException("Password must contain at least 6 characters.");
 
             var tokenHash = HashToken(request.Token);
 
@@ -41,7 +42,7 @@ namespace SmartSchedule.Application.Services.Users.ResetPassword
                     cancellationToken);
 
             if (resetToken is null)
-                throw new InvalidOperationException("Invalid or expired reset token.");
+                throw new ValidationException("Invalid or expired reset token.");
 
             var user = resetToken.User;
 

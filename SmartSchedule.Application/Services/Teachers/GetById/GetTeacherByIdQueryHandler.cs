@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
+using SmartSchedule.Application.Common.Exceptions;
 using SmartSchedule.Application.Interfaces;
 using SmartSchedule.Domain.Enums;
 
@@ -36,7 +37,7 @@ namespace SmartSchedule.Application.Services.Teachers.GetById
 
             if (teacher is null)
             {
-                throw new InvalidOperationException("Teacher not found.");
+                throw new NotFoundException("Teacher not found.");
             }
 
             return teacher;
